@@ -1,34 +1,53 @@
-export interface PDFFile {
-  id: string;
-  fileName: string;
+export enum ProcessingType {
+  Merge = 'merge',
+  Split = 'split',
+  Compress = 'compress',
+  Convert = 'convert'
+}
+
+interface ProcessingSettingsBase {
+  type: ProcessingType;
+}
+
+interface CompressSettings extends ProcessingSettingsBase {
+  type: ProcessingType.Compress;
+  quality: number;
+}
+
+interface SplitSettings extends ProcessingSettingsBase {
+  type: ProcessingType.Split;
+  pageRange: string;
+}
+
+interface ConvertSettings extends ProcessingSettingsBase {
+  type: ProcessingType.Convert;
+  outputFormat: string;
+  isImageToPdf?: boolean;
+}
+
+interface MergeSettings extends ProcessingSettingsBase {
+  type: ProcessingType.Merge;
+  order: string[];
+}
+
+export type ProcessingSettings =
+  | CompressSettings
+  | SplitSettings
+  | ConvertSettings
+  | MergeSettings;
+
+export type PDFFile = {
+  name: string;
   size: number;
-  createdAt: Date;
-  status: 'processed' | 'processing' | 'error';
-  url?: string;
-  thumbnailUrl?: string;
-  processingType?: 'compress' | 'convert' | 'merge' | 'split';
-  userId: string;
-}
+  lastModified: number;
+  type: string;
+};
 
-export interface UserProfile {
-  id: string;
-  email: string;
-  subscription: string;
-  usageLimit: number;
-  usedStorage: number;
-  totalFiles: number;
-  createdAt: Date;
-}
+export type ProcessingOptions = {
+  type: ProcessingType;
+  settings: ProcessingSettings;
+};
 
-export interface ProcessingOptions {
-  maxFileSize?: number;
-  allowedTypes?: string[];
-  preserveQuality?: boolean;
-  compression?: {
-    level: 'low' | 'medium' | 'high';
-  };
-  conversion?: {
-    format: string;
-    quality?: number;
-  };
+export function isConvertSettings(settings: ProcessingSettings): settings is ConvertSettings {
+  return settings.type === ProcessingType.Convert;
 }

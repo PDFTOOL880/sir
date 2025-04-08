@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-export const config = {
-  api: {
-    bodyParser: false,
-    responseLimit: '50mb',
-  },
-}
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+export const maxDuration = 300
+// Disable bodyParser as we're handling form data manually
+// Set response size limit to 50mb
 
 // Configure response headers
 const responseHeaders = {

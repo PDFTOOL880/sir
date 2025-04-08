@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export const runtime = 'nodejs';
-export const maxDuration = 300; // 5 minutes
-export const bodySize = '50mb';
-export const dynamic = 'force-dynamic';
+// Configure route handlers
+export const runtime = 'nodejs'
+export const maxDuration = 300 // 5 minutes
+export const dynamic = 'force-dynamic'

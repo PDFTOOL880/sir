@@ -1,11 +1,19 @@
 import { PDFDocument } from 'pdf-lib'
-import { ProcessingOptions } from '@/types'
-import { connectDB } from './db'
-import { PDFFile } from '@/types'
+import { ProcessingOptions, PDFFile } from '@/types'
+import connectDB from './db'
 import JSZip from 'jszip'
 
+// Helper functions to safely access settings
+function getConvertSettings(options: Pick<ProcessingOptions, 'type' | 'settings'>) {
+  return options.settings?.convert
+}
+
+function getSplitSettings(options: Pick<ProcessingOptions, 'type' | 'settings'>) {
+  return options.settings?.split
+}
+
 export async function processPDF(
-  file: File, 
+  file: File,
   options: ProcessingOptions,
   onProgress?: (progress: number) => void
 ): Promise<Uint8Array | Blob> {
@@ -14,11 +22,11 @@ export async function processPDF(
     const arrayBuffer = await file.arrayBuffer()
     onProgress?.(30)
 
-    if (options.type === 'convert' && options.settings && 'outputFormat' in options.settings) {
-      const { outputFormat } = options.settings
+    if (options.type === 'convert') {
+      const convertSettings = getConvertSettings(options)
       const formData = new FormData()
       formData.append('file', file)
-      formData.append('format', outputFormat || 'docx')
+      formData.append('format', convertSettings?.outputFormat || 'docx')
       
       const response = await fetch('/api/convert', {
         method: 'POST',
@@ -45,26 +53,27 @@ export async function processPDF(
     }
 
     switch (options.type) {
-      case 'compress':
+      case 'compress': {
+        // Save with maximum compression using object streams
         return await pdfDoc.save({
-          useObjectStreams: true,
-          updateMetadata: false,
-          compress: true
+          useObjectStreams: true
         })
-      case 'split':
-        if (options.settings && 'pageRange' in options.settings) {
-          const pageNumbers = options.settings.pageRange
-            ? parsePageRange(options.settings.pageRange)
-            : [0]
+      }
+      case 'split': {
+        const splitSettings = getSplitSettings(options)
+        if (splitSettings?.pageRange) {
+          const pageNumbers = parsePageRange(splitSettings.pageRange)
           const newDoc = await PDFDocument.create()
           const pages = await newDoc.copyPages(pdfDoc, pageNumbers)
           pages.forEach(page => newDoc.addPage(page))
           return await newDoc.save()
         }
         return await pdfDoc.save()
-      case 'merge':
+      }
+      case 'merge': {
         // Placeholder for merge logic
         return await pdfDoc.save()
+      }
       default:
         throw new Error('Unsupported operation')
     }
@@ -112,9 +121,11 @@ export async function saveProcessedFile(
     id: crypto.randomUUID(),
     userId,
     originalName: file.name,
+    fileName: file.name,
     path: `/uploads/${userId}/${file.name}`,
     size: processedData.length,
-    createdAt: new Date()
+    createdAt: new Date(),
+    status: 'processed'
   }
 
   // Save to database logic here
@@ -128,10 +139,15 @@ export async function createDownloadZip(
 ): Promise<Blob> {
   const zip = new JSZip()
   
-  files.forEach((file, index) => {
-    zip.file(file.originalName, fetch(file.path).then(res => res.blob()))
-    onProgress?.((index + 1) / files.length * 100)
-  })
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i]
+    const url = file.url || file.path
+    await zip.file(
+      file.fileName || file.originalName,
+      (await fetch(url)).blob()
+    )
+    onProgress?.((i + 1) / files.length * 100)
+  }
 
   return await zip.generateAsync({ type: 'blob' })
 }

@@ -21,15 +21,20 @@ const mockProfile: UserProfile = {
 };
 
 // Mock files for demonstration
-const mockFiles: PDFFile[] = Array.from({ length: 25 }, (_, i) => ({
-  id: `${i + 1}`,
-  fileName: `document${i + 1}.pdf`,
-  size: 1024 * 1024 * (Math.random() * 5), // Random size up to 5MB
-  createdAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000), // Random date within last 30 days
-  status: ['processed', 'processing', 'error'][Math.floor(Math.random() * 3)] as 'processed' | 'processing' | 'error',
-  processingType: ['compress', 'convert', 'merge', 'split'][Math.floor(Math.random() * 4)] as 'compress' | 'convert' | 'merge' | 'split',
-  userId: '1'
-})).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()); // Sort by date desc
+const mockFiles: PDFFile[] = Array.from({ length: 25 }, (_, i) => {
+  const filename = `document${i + 1}.pdf`;
+  return {
+    id: `${i + 1}`,
+    userId: '1',
+    originalName: filename,
+    fileName: filename,
+    path: `/uploads/1/${filename}`,
+    size: 1024 * 1024 * (Math.random() * 5), // Random size up to 5MB
+    createdAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000), // Random date within last 30 days
+    status: ['processed', 'processing', 'error'][Math.floor(Math.random() * 3)] as 'processed' | 'processing' | 'error',
+    processingType: ['compress', 'convert', 'merge', 'split'][Math.floor(Math.random() * 4)] as 'compress' | 'convert' | 'merge' | 'split'
+  }
+}).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()); // Sort by date desc
 
 export function Dashboard() {
   const { user } = useAuth();

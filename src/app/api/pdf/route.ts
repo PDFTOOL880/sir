@@ -1,39 +1,44 @@
 import { NextResponse } from 'next/server'
-import { PDFDocument } from 'pdf-lib'
 import { ProcessingOptions } from '@/types'
+import { processPDF } from '@/lib/pdf-service'
+
+// Add request validation and error handling middleware
+async function validateRequest(request: Request) {
+  if (!request.body) {
+    throw new Error('Request body is required')
+  }
+
+  const formData = await request.formData()
+  const file = formData.get('file') as File
+  const optionsStr = formData.get('options') as string
+
+  if (!file || !file.type.includes('pdf')) {
+    throw new Error('Valid PDF file is required')
+  }
+
+  try {
+    return { file, options: JSON.parse(optionsStr) }
+  } catch {
+    throw new Error('Invalid options format')
+  }
+}
 
 export async function POST(request: Request) {
   try {
-    const formData = await request.formData()
-    const file = formData.get('file') as Blob
-    const optionsStr = formData.get('options') as string
-    const options = JSON.parse(optionsStr)
-
-    // Read file as ArrayBuffer
-    const arrayBuffer = await file.arrayBuffer()
+    const { file, options } = await validateRequest(request)
+    const processedPDF = await processPDF(file, options)
     
-    // Load PDF document
-    const pdfDoc = await PDFDocument.load(arrayBuffer)
-    
-    // For now, just return the PDF with minimal processing
-    const pdfBytes = await pdfDoc.save({
-      useObjectStreams: true,
-      addDefaultPage: false,
-    })
-
-    return new Response(pdfBytes, {
+    return new NextResponse(processedPDF, {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="processed.pdf"`,
+        'Content-Disposition': `attachment; filename="processed-${file.name}"`,
+        'Cache-Control': 'no-cache'
       },
     })
-
   } catch (error) {
     console.error('PDF processing error:', error)
     return NextResponse.json({ 
-      error: 'PDF processing failed. Please try again.' 
-    }, { 
-      status: 500 
-    })
+      error: error instanceof Error ? error.message : 'Processing failed'
+    }, { status: 500 })
   }
 }

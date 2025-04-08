@@ -3,7 +3,7 @@
 import { useParams } from 'next/navigation'
 import { useState } from 'react'
 import { FileUpload } from '@/components/FileUpload'
-import { ProcessingOptions, ToolSettings, PDFFile } from '@/types'
+import { ProcessingType, ProcessingSettings, PDFFile, ProcessingOptions, isConvertSettings } from '@/types'
 import { useTranslation } from 'react-i18next'
 import { FileList } from '@/components/FileList'
 
@@ -43,8 +43,8 @@ export default function ToolPage() {
   const tool = params?.tool as string
   
   // Validate tool type
-  const validTools = ['merge', 'split', 'compress', 'convert']
-  if (!validTools.includes(tool)) {
+  const validTools: ProcessingType[] = ['merge', 'split', 'compress', 'convert']
+  if (!validTools.includes(tool as ProcessingType)) {
     return (
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-8 dark:text-white">
@@ -57,21 +57,24 @@ export default function ToolPage() {
   const { t } = useTranslation()
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
-  
-  const [settings, setSettings] = useState<ToolSettings[keyof ToolSettings]>(() => {
-    switch (tool) {
-      case 'compress':
-        return { quality: 80 }
-      case 'split':
-        return { pageRange: '1-2' }
-      case 'convert':
-        return { outputFormat: 'docx' }
-      case 'merge':
-        return { order: [] }
+  const getInitialSettings = (type: ProcessingType): ProcessingSettings => {
+    switch (type) {
+      case ProcessingType.Compress:
+        return { type: ProcessingType.Compress, quality: 80 }
+      case ProcessingType.Split:
+        return { type: ProcessingType.Split, pageRange: '1-2' }
+      case ProcessingType.Convert:
+        return { type: ProcessingType.Convert, outputFormat: 'docx', isImageToPdf: false }
+      case ProcessingType.Merge:
+        return { type: ProcessingType.Merge, order: [] }
       default:
-        return { outputFormat: 'docx' }
+        return { type: ProcessingType.Convert, outputFormat: 'docx', isImageToPdf: false }
     }
-  })
+  }
+
+  const [settings, setSettings] = useState<ProcessingSettings>(
+    getInitialSettings(tool as ProcessingType)
+  )
 
   const [files, setFiles] = useState<File[]>([])
   const [currentPage, setCurrentPage] = useState(1)
@@ -90,7 +93,7 @@ export default function ToolPage() {
       setProgress(10)
       const formData = new FormData()
       formData.append('file', file)
-      if (tool === 'convert' && settings && 'outputFormat' in settings) {
+      if (isConvertSettings(settings)) {
         formData.append('format', settings.outputFormat)
       }
 
@@ -185,8 +188,13 @@ export default function ToolPage() {
         )}
         
         <FileUpload 
-          onUpload={handleUpload} 
-          options={{ type: tool as ProcessingOptions['type'], settings }}
+          onUpload={handleUpload}
+          options={
+            {
+              type: tool as ProcessingType,
+              settings
+            } as ProcessingOptions
+          }
           onProgress={setProgress}
         />
       </div>
@@ -196,7 +204,7 @@ export default function ToolPage() {
         currentPage={currentPage}
         filesPerPage={filesPerPage}
         onPageChange={setCurrentPage}
-        onRemove={(index) => setFiles(files.filter((_, i) => i !== index))}
+        onRemove={(index: number) => setFiles(files.filter((_, i) => i !== index))}
       />
     </div>
   )

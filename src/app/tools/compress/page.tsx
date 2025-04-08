@@ -214,11 +214,11 @@ export default function CompressPDFPage() {
         )}
         
         <FileUpload 
-          onUpload={handleUpload} 
-          options={{ 
-            type: 'compress' as ProcessingOptions['type'],
-            settings: { quality }
-          }}
+          onUpload={handleUpload}
+          options={{
+            type: 'compress',
+            settings: { compress: { quality } }
+          } as ProcessingOptions}
           onProgress={setProgress}
         />
       </div>
@@ -228,7 +228,7 @@ export default function CompressPDFPage() {
         currentPage={currentPage}
         filesPerPage={filesPerPage}
         onPageChange={setCurrentPage}
-        onRemove={(index) => setFiles(files.filter((_, i) => i !== index))}
+        onRemove={(index: number) => setFiles(files.filter((_, i) => i !== index))}
       />
     </div>
   )
